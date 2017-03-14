@@ -14,6 +14,43 @@ from kivy.properties import (
 
 from kivy.clock import mainthread
 
+VS = '''
+#ifdef GL_ES
+    precision highp float;
+#endif
+
+attribute vec3 v_pos;
+attribute float lum;
+
+uniform mat4 modelview_mat;
+uniform mat4 projection_mat;
+
+varying vec4 vertex_pos;
+varying float vertex_lum;
+
+void main (void) {
+    //compute vertex position in eye_sapce and normalize normal vector
+    vec4 pos = modelview_mat * vec4(v_pos,1.0);
+    vertex_pos = pos;
+    vertex_lum = lum;
+    gl_Position = projection_mat * pos;
+}
+
+'''
+
+FS = '''
+#ifdef GL_ES
+    precision highp float;
+#endif
+
+varying vec4 vertex_pos;
+varying float vertex_lum;
+
+void main (void){
+    gl_FragColor = vec4(1.0, 1.0, 1.0, vertex_lum);
+}
+'''
+
 
 class DataRenderer(Widget):
     obj_translation = ListProperty([0, 0, 0])
@@ -38,7 +75,8 @@ class DataRenderer(Widget):
 
             self.viewport = Rectangle(size=self.size, pos=self.pos)
 
-        self.fbo.shader.source = join(dirname(__file__), ('simple.glsl'))
+        self.fbo.shader.vs = VS
+        self.fbo.shader.fs = FS
         print "shader:", self.fbo.shader.source
         super(DataRenderer, self).__init__(**kwargs)
 
