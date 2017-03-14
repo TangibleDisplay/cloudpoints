@@ -279,16 +279,26 @@ class View(DataRenderer):
             for i in range(3)
         ]
 
-        print "header_min =", f.header.min
-        print "header_max =", f.header.max
-        print "offset =", self.model_offset
-        print "scale =", scale
-        print self.min_, self.max_
-
         self.add_grid(
             min_,
             max_, 10, 20)
+
+        Clock.schedule_once(self.go_to_origin)
         self.fetch_data(f)
+
+    def go_to_origin(self, *args):
+        for x in range(3):
+            self.cam_translation[x] = -(self.max_[x] - self.min_[x]) / 2
+
+        self.cam_translation[2] -= 1 / self.model_scale[2] * 100
+
+        # self.cam_rotation = [
+        #     -90,
+        #     0,
+        #     -90
+        # ]
+
+        self.obj_scale = self.model_scale[0] / 10
 
     def fetch_data(self, f):
         rendering = self
