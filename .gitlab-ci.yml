@@ -1,0 +1,23 @@
+wheel:
+  tags:
+    - linux
+  script:
+    - python setup.py bdist_wheel
+
+  artifacts:
+    paths:
+      - dist/*.whl
+
+promote:
+  stage: deploy
+  tags:
+    - linux
+
+  dependencies:
+    - wheel
+
+  when: manual
+
+  script:
+      - ssh pypi@pypi.lab.tdl.io mkdir -p /SYSEXT/data/pypi.lab.tdl.io/simple/cloudpoints/
+      - scp dist/*.whl pypi@pypi.lab.tdl.io:/SYSEXT/data/pypi.lab.tdl.io/simple/cloudpoints/
