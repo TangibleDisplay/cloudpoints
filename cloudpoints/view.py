@@ -98,9 +98,9 @@ class View(DataRenderer):
             )
 
             ct = self.cam_translation
-            ct[0] += (vec[0] * zoom + strafe_vector[0]) * 10000
-            ct[1] += (vec[1] * zoom + strafe_vector[1]) * 10000
-            ct[2] += (vec[2] * zoom + strafe_vector[2]) * 10000
+            ct[0] += (vec[0] * zoom + strafe_vector[0] / 10.) * 10000
+            ct[1] += (vec[1] * zoom + strafe_vector[1] / 10.) * 10000
+            ct[2] += (vec[2] * zoom + strafe_vector[2] / 10.) * 10000
 
             self.touches_center = c
             self.touches_dist = d
