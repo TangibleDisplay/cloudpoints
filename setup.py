@@ -10,7 +10,11 @@ setup(
         'visualise LIDAR data'
     ),
     py_modules=['cloudoints'],
+    platforms='any',
+    include_package_data=True,
+    packages=['cloudpoints'],
     install_requires=[
+        'liblas',
     ],
     entry_points='''
         [console_scripts]
