@@ -11,5 +11,9 @@ setup(
     ),
     py_modules=['cloudoints'],
     install_requires=[
-    ]
+    ],
+    entry_points='''
+        [console_scripts]
+        cloudpoints=cloudpoints.view:main
+    '''
 )

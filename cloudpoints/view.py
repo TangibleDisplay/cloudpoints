@@ -40,7 +40,7 @@ class View(DataRenderer):
         Clock.schedule_interval(self.update_cam, 0)
 
     def on_touch_down(self, touch):
-        if super(View, self).on_touch_move(touch):
+        if super(View, self).on_touch_down(touch):
             return True
 
         if self.collide_point(*touch.pos):
@@ -49,6 +49,8 @@ class View(DataRenderer):
             if len(self.touches) > 1:
                 self.touches_center = self.get_center()
                 self.touches_dist = self.get_dist(self.touches_center)
+
+            return True
 
     def get_direction_vector(self):
         ax = radians(self.cam_rotation[0])
@@ -230,8 +232,9 @@ class View(DataRenderer):
             self.touches.remove(touch)
             self.touches_center = self.get_center()
             self.touches_dist = self.get_dist(self.touches_center)
+            return True
         else:
-            return super(View, self).on_touch_move(touch)
+            return super(View, self).on_touch_up(touch)
 
     def get_center(self):
         return (
@@ -473,5 +476,9 @@ class App3D(App):
         return root
 
 
-if __name__ == '__main__':
+def main():
     App3D().run()
+
+
+if __name__ == '__main__':
+    main()

@@ -1,5 +1,5 @@
+from os.path import join, dirname
 from kivy.uix.widget import Widget
-from kivy.resources import resource_find
 from kivy.graphics.fbo import Fbo
 from kivy.graphics import (
     Callback, PushMatrix, PopMatrix, Rotate, Translate, Scale,
@@ -38,7 +38,8 @@ class DataRenderer(Widget):
 
             self.viewport = Rectangle(size=self.size, pos=self.pos)
 
-        self.fbo.shader.source = resource_find('simple.glsl')
+        self.fbo.shader.source = join(dirname(__file__), ('simple.glsl'))
+        print "shader:", self.fbo.shader.source
         super(DataRenderer, self).__init__(**kwargs)
 
     def on_cam_rotation(self, *args):
