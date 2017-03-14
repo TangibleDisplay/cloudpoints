@@ -1,18 +1,16 @@
-#encoding: utf-8
+# encoding: utf-8
 
 from kivy.config import Config
-Config.set('input', 'mouse', 'mouse')
+Config.set('input', 'mouse', 'mouse') # noqa
 
 from math import cos, sin, radians
 from object_renderer import DataRenderer
 from kivy.core.window import Window  # noqa
 from kivy.lang import Builder
-from kivy.properties import ListProperty, NumericProperty, AliasProperty, DictProperty
+from kivy.properties import AliasProperty, DictProperty
 from kivy.clock import Clock
-from kivy.animation import Animation
 from kivy.app import App
 from threading import Thread
-from random import random
 from liblas import file as las
 from os.path import splitext, exists, join, basename
 
@@ -99,9 +97,10 @@ class View(DataRenderer):
                 strafe[0] * v1[2] + strafe[1] * v2[2]
             )
 
-            self.cam_translation[0] += (vec[0] * zoom + strafe_vector[0]) * 10000
-            self.cam_translation[1] += (vec[1] * zoom + strafe_vector[1]) * 10000
-            self.cam_translation[2] += (vec[2] * zoom + strafe_vector[2]) * 10000
+            ct = self.cam_translation
+            ct[0] += (vec[0] * zoom + strafe_vector[0]) * 10000
+            ct[1] += (vec[1] * zoom + strafe_vector[1]) * 10000
+            ct[2] += (vec[2] * zoom + strafe_vector[2]) * 10000
 
             self.touches_center = c
             self.touches_dist = d
@@ -148,6 +147,8 @@ class View(DataRenderer):
             dx = abs(int(x) - high[0])
             dy = abs(int(y) - high[1])
             score = dx + dy
+            # XXX todo
+            score
 
     def on_cam_translation(self, *args):
         super(View, self).on_cam_translation(*args)
@@ -471,7 +472,7 @@ FloatLayout:
                     on_state:
                         if self.state == 'normal': rendering.rendering.remove(rendering.cross)
                         else: rendering.rendering.add(rendering.cross)
-'''
+'''  # noqa
 
 
 class App3D(App):
