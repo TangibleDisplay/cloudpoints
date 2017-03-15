@@ -76,7 +76,7 @@ class View(DataRenderer):
             d = self.get_dist(c)
 
             vec = self.direction_vector
-            zoom = min(.5, max(-.5, (d - self.touches_dist) / 10.))
+            zoom = min(5, max(-5, (d - self.touches_dist)))
 
             # get the cross product of direction vector to vertical
             # axis, to get our first translation vector
