@@ -163,6 +163,9 @@ class View(DataRenderer):
             print "{} doesn't exist".format(filename)
             return
 
+        if not self.low_loaded:
+            return
+
         loader = self.loaders.get(filename)
 
         if not loader:
@@ -250,6 +253,7 @@ class View(DataRenderer):
         ) / float(len(self.touches))) if self.touches else 0
 
     def load_low(self, filename):
+        self.low_loaded = False
         fn, ext = splitext(filename)
         if fn.endswith('_low'):
             fn = fn[:-(len('_low'))]
@@ -286,6 +290,7 @@ class View(DataRenderer):
 
         Clock.schedule_once(self.go_to_origin)
         self.fetch_data(f)
+        self.low_loaded = True
 
     def go_to_origin(self, *args):
         for x in range(3):
