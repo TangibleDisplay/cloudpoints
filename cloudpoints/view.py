@@ -12,11 +12,20 @@ from kivy.clock import Clock
 from kivy.app import App
 from threading import Thread
 from liblas import file as las
-from os.path import splitext, exists, join, basename
+from os.path import splitext, exists
+from itertools import dropwhile
 
 
 def dist(p1, p2):
     return ((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2) ** .5
+
+
+def dist3(p1, p2):
+    return (
+        (p1[0] - p2[0]) ** 2 +
+        (p1[1] - p2[1]) ** 2 +
+        (p1[2] - p2[2]) ** 2
+    ) ** .5
 
 
 def cross(a, b):
@@ -106,96 +115,44 @@ class View(DataRenderer):
             self.touches_dist = d
         return True
 
-    def get_boxes(self, medium_range, high_range):
+    def get_boxes(self):
+        CUT = 100
+
         min_ = self.min_
         max_ = self.max_
-        x, y = [int(-x) for x in self.cam_translation[:2]]
-        return [
-            (
-                int((x - min_[0]) // ((max_[0] - min_[0]) / medium_range)),
-                int((y - min_[1]) // ((max_[1] - min_[1]) / medium_range)),
-            ), (
-                int((x - min_[0]) // ((max_[0] - min_[0]) / high_range)),
-                int((y - min_[1]) // ((max_[1] - min_[1]) / high_range)),
-            )
-        ]
+        x, y, z = [int(-x) for x in self.cam_translation]
 
-    # boxes = AliasProperty(get_boxes, bind=('cam_translation'))
+        x_min, y_min = min_[0], min_[1]
+        x_max, y_max = max_[0], max_[1]
 
-    def on_nb_points(self, *args):
-        # 10M points
-        if self.nb_points > (10 ** 7):
-            self.remove_old_lod()
+        x_inc = (x_max - x_max) / CUT
+        y_inc = (y_max - y_max) / CUT
 
-    def remove_old_lod(self):
-        candidates = []
+        for Xi in xrange(CUT):
+            for Yi in xrange(CUT):
+                if (Xi, Yi) not in self.indexes:
+                    print "ignoring {},{}".format(Xi, Yi)
+                    continue
 
-        for fn, loader in self.loaders.items():
-            if loader is True and 'high' in fn:
-                candidates.append(fn)
+                X = x_min + (Xi + .5) * x_inc
+                Y = y_min + (Yi + .5) * y_inc
 
-#         # XXX fallback
-#         if not candidates:
-#             for fn, loader in self.loaders.items():
-#                 if loader is True:
-#                     candidates.append(fn)
-
-        for c in candidates:
-            level, x, y = splitext(c)[0].split('_')[-3:]
-            boxes = self.get_boxes()
-            high = boxes[1]
-            dx = abs(int(x) - high[0])
-            dy = abs(int(y) - high[1])
-            score = dx + dy
-            # XXX todo
-            score
+                yield((Xi, Yi), dist3((X, Y, 0), (x, y, z)))
 
     def on_cam_translation(self, *args):
         super(View, self).on_cam_translation(*args)
-        boxes = self.get_boxes(10, 20)
-        filename = '{filename}_{level}_{x}_{y}.las'.format(
-            filename=self.filename,
-            level='medium',
-            x=boxes[0][0],
-            y=boxes[0][1]
-        )
-        if not exists(filename):
-            print "{} doesn't exist".format(filename)
-            return
+        boxes = self.get_boxes()
+        distances = [
+            (10 ** 4, 1),
+            (10 ** 5, .1),
+            (10 ** 6, .01),
+            (float('inf'), .001),
+        ]
 
-        if not self.low_loaded:
-            return
-
-        loader = self.loaders.get(filename)
-
-        if not loader:
-            print "starting loading of {}".format(filename)
-            self.loaders[filename] = t = Thread(
-                target=self.load_lod, args=[filename, ])
-            t.daemon = True
-            t.start()
-
-        elif loader is True:
-            # first loader is done, let's go for the high precision
-            filename = '{filename}_{level}_{x}_{y}.las'.format(
-                filename=self.filename,
-                level='high',
-                x=boxes[1][0],
-                y=boxes[1][1]
-            )
-            loader = self.loaders.get(filename)
-            if not loader:
-                self.loaders[filename] = t = Thread(
-                    target=self.load_lod, args=[filename, ])
-                t.daemon = True
-                t.start()
-            elif loader is True:
-                print "{} is done loading".format(filename)
-            else:
-                print "{} already loading".format(filename)
-
-        else:
-            print "{} already loading".format(filename)
+        for box, distance in boxes:
+            c = list(dropwhile(lambda x: x[0] < distance, distances))
+            density = c[0][1]
+            self.load_box(box, density)
 
         self.cross.vertices = [
             -self.cam_translation[0], self.min_[1], 0., 1.,
@@ -204,31 +161,18 @@ class View(DataRenderer):
             self.max_[0], -self.cam_translation[1], 0., 1.,
         ]
 
-        # debug
-        min_ = self.min_
-        max_ = self.max_
-        range_ = 20
-        step = [(max_[i] - min_[i]) / range_ for i in range(2)]
+    def load_box(self, box, density):
+        loader = self.loaders.get(box, {}).get(density)
 
-        self.tile.vertices = [
-            (boxes[1][0] * step[0] + min_[0]),
-            (boxes[1][1] * step[1] + min_[1]), -0.1, .4,
-
-            ((boxes[1][0] + 1) * step[0] + min_[0]),
-            (boxes[1][1] * step[1] + min_[1]), -0.1, .4,
-
-            ((boxes[1][0] + 1) * step[0] + min_[0]),
-            ((boxes[1][1] + 1) * step[1] + min_[1]), -0.1, .4,
-
-            (boxes[1][0] * step[0] + min_[0]),
-            ((boxes[1][1] + 1) * step[1] + min_[1]), -0.1, .4,
-        ]
-
-    def load_lod(self, filename):
-        f = las.File(filename)
-        self.fetch_data(f)
-        # mark the loading as done
-        self.loaders[filename] = True
+        if not loader:
+            print "starting loading of box:{}, density:{}".format(box, density)
+            # TODO on complete, remove the previous LOD
+            box_loader = self.loaders.setdefault(box, {})
+            self.fetch_data(box, density)
+            # box_loader[density] = t = Thread(
+            #     target=self.fetch_data, args=[box, density])
+            # t.daemon = True
+            # t.start()
 
     def on_touch_up(self, touch):
         if touch.grab_current is self:
@@ -254,22 +198,17 @@ class View(DataRenderer):
 
     def load_low(self, filename):
         self.low_loaded = False
-        fn, ext = splitext(filename)
-        if fn.endswith('_low'):
-            fn = fn[:-(len('_low'))]
 
-        elif exists(filename + '_lod'):
-            print "loading LOD instead"
-            fn = join(filename + '_lod', splitext(basename(fn))[0])
-            filename = fn + '_low' + '.las'
-            print filename
+        self.indexes = {}
+        with open(filename + '.indexes') as f_indexes:
+            for l in f_indexes:
+                box, indexes = l.split(':')
+                self.indexes[
+                    tuple(int(x) for x in box.split(','))
+                ] = [int(x) for x in indexes.split(',')]
+            print self.indexes
 
-        if ext == 'zlas':
-            import zipfile
-            self.filename = zipfile.open(filename)
-        else:
-            self.filename = fn
-            f = las.File(filename)
+        self.model = f = las.File(filename)
 
         self.model_offset = f.header.offset
         self.model_scale = scale = f.header.get_scale()
@@ -289,7 +228,7 @@ class View(DataRenderer):
             max_, 10, 20)
 
         Clock.schedule_once(self.go_to_origin)
-        self.fetch_data(f)
+        self.fetch_data(density=.001)
         self.low_loaded = True
 
     def go_to_origin(self, *args):
@@ -297,25 +236,35 @@ class View(DataRenderer):
             self.cam_translation[x] = -(self.max_[x] - self.min_[x]) / 2
 
         self.cam_translation[2] -= 1 / self.model_scale[2] * 100
-
-        # self.cam_rotation = [
-        #     -90,
-        #     0,
-        #     -90
-        # ]
-
         self.obj_scale = self.model_scale[0] / 10
 
-    def fetch_data(self, f):
+    def fetch_data(self, box=None, density=None):
         rendering = self
 
         l = 0
         points = []
-        i = 0
+        f = self.model
+
+        import pudb; pudb.set_trace()
+        if box is None:
+            i_min = 0
+            i_max = len(f)
+        else:
+            if box not in self.indexes:
+                print "box {} doesn't exist".format(box)
+                return
+
+            i_min = self.indexes[box][0]
+            i_max = self.indexes[box][1]
+
+        print "loading box {}".format(box)
         o_x, o_y, o_z = self.model_offset
         s_x, s_y, s_z = self.model_scale
 
-        for i, p in enumerate(f):
+        for i in xrange(i_min, i_max, int(1 / density)):
+            # if di and i % densities[di - 1]:
+            #     continue
+            p = f.read(i)
             x = (p.x - o_x) / s_x
             y = (p.y - o_y) / s_y
             z = (p.z - o_z) / s_z
