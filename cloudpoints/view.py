@@ -10,7 +10,7 @@ from kivy.lang import Builder
 from kivy.properties import AliasProperty, DictProperty
 from kivy.clock import Clock
 from kivy.app import App
-from threading import Thread
+from threading import Thread, Lock
 from liblas import file as las
 from os.path import splitext, exists
 from itertools import dropwhile
@@ -144,20 +144,20 @@ class View(DataRenderer):
         boxes = self.get_boxes()
 
         distances = [
-            (10 ** 5, 1),
-            (10 ** 6, .1),
-            (10 ** 7, .01),
+            (10 ** 4, 1),
+            (10 ** 5, .1),
+            (10 ** 6, .01),
             (float('inf'), .001),
         ]
 
-        min_d = float('inf')
-        max_d = float('inf')
+        min_d = max_d = float('inf')
         for box, distance in boxes:
             min_d = min(min_d, distance)
             max_d = min(max_d, distance)
             c = list(dropwhile(lambda x: x[0] < distance, distances))
             density = c[0][1]
-            self.load_box(box, density)
+            if box in self.indexes:
+                self.load_box(box, density)
         print min_d, max_d
 
         self.cross.vertices = [
@@ -173,12 +173,12 @@ class View(DataRenderer):
         if not loader:
             # TODO on complete, remove the previous LOD
             box_loader = self.loaders.setdefault(box, {})
-            box_loader[density] = True
-            self.fetch_data(box, density)
-            # box_loader[density] = t = Thread(
-            #     target=self.fetch_data, args=[box, density])
-            # t.daemon = True
-            # t.start()
+            # box_loader[density] = True
+            # self.fetch_data(box, density)
+            box_loader[density] = t = Thread(
+                target=self.fetch_data, args=[box, density])
+            t.daemon = True
+            t.start()
 
     def on_touch_up(self, touch):
         if touch.grab_current is self:
@@ -203,6 +203,7 @@ class View(DataRenderer):
         ) / float(len(self.touches))) if self.touches else 0
 
     def load_low(self, filename):
+        self.lock = Lock()
         self.low_loaded = False
 
         self.indexes = {}
@@ -263,7 +264,8 @@ class View(DataRenderer):
         for i in xrange(i_min, i_max, int(1 / density)):
             # if di and i % densities[di - 1]:
             #     continue
-            p = f.read(i)
+            with self.lock:
+                p = f.read(i)
             x = (p.x - o_x) / s_x
             y = (p.y - o_y) / s_y
             z = (p.z - o_z) / s_z
