@@ -120,7 +120,7 @@ class View(DataRenderer):
 
         min_ = self.min_
         max_ = self.max_
-        x, y, z = [int(-x) for x in self.cam_translation]
+        x, y, z = [int(x) for x in self.cam_translation]
 
         x_min, y_min = min_[0], min_[1]
         x_max, y_max = max_[0], max_[1]
@@ -131,28 +131,34 @@ class View(DataRenderer):
         for Xi in xrange(CUT):
             for Yi in xrange(CUT):
                 if (Xi, Yi) not in self.indexes:
-                    print "ignoring {},{}".format(Xi, Yi)
+                    # print "ignoring {},{}".format(Xi, Yi)
                     continue
 
-                X = x_min + (Xi + .5) * x_inc
-                Y = y_min + (Yi + .5) * y_inc
+                X = x_min + Xi * x_inc
+                Y = y_min + Yi * y_inc
 
                 yield((Xi, Yi), dist3((X, Y, 0), (x, y, z)))
 
     def on_cam_translation(self, *args):
         super(View, self).on_cam_translation(*args)
         boxes = self.get_boxes()
+
         distances = [
-            (10 ** 4, 1),
-            (10 ** 5, .1),
-            (10 ** 6, .01),
+            (10 ** 5, 1),
+            (10 ** 6, .1),
+            (10 ** 7, .01),
             (float('inf'), .001),
         ]
 
+        min_d = float('inf')
+        max_d = float('inf')
         for box, distance in boxes:
+            min_d = min(min_d, distance)
+            max_d = min(max_d, distance)
             c = list(dropwhile(lambda x: x[0] < distance, distances))
             density = c[0][1]
             self.load_box(box, density)
+        print min_d, max_d
 
         self.cross.vertices = [
             -self.cam_translation[0], self.min_[1], 0., 1.,
@@ -165,9 +171,9 @@ class View(DataRenderer):
         loader = self.loaders.get(box, {}).get(density)
 
         if not loader:
-            print "starting loading of box:{}, density:{}".format(box, density)
             # TODO on complete, remove the previous LOD
             box_loader = self.loaders.setdefault(box, {})
+            box_loader[density] = True
             self.fetch_data(box, density)
             # box_loader[density] = t = Thread(
             #     target=self.fetch_data, args=[box, density])
@@ -206,7 +212,6 @@ class View(DataRenderer):
                 self.indexes[
                     tuple(int(x) for x in box.split(','))
                 ] = [int(x) for x in indexes.split(',')]
-            print self.indexes
 
         self.model = f = las.File(filename)
 
@@ -228,7 +233,7 @@ class View(DataRenderer):
             max_, 10, 20)
 
         Clock.schedule_once(self.go_to_origin)
-        self.fetch_data(density=.001)
+        # self.fetch_data(density=.001)
         self.low_loaded = True
 
     def go_to_origin(self, *args):
@@ -245,19 +250,13 @@ class View(DataRenderer):
         points = []
         f = self.model
 
-        import pudb; pudb.set_trace()
         if box is None:
             i_min = 0
             i_max = len(f)
         else:
-            if box not in self.indexes:
-                print "box {} doesn't exist".format(box)
-                return
-
             i_min = self.indexes[box][0]
             i_max = self.indexes[box][1]
 
-        print "loading box {}".format(box)
         o_x, o_y, o_z = self.model_offset
         s_x, s_y, s_z = self.model_scale
 

@@ -154,7 +154,7 @@ class DataRenderer(Widget):
         )
         self.nb_points += len(data) / 4
         self.rendering.add(m)
-        print "added mesh", m
+        # print "added mesh", m
 
     @mainthread
     def add_grid(self, min_, max_, medium_range, high_range):
