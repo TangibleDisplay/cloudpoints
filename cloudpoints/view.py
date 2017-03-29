@@ -141,7 +141,7 @@ class View(DataRenderer):
                 Y = y_min + Yi * y_inc + y_inc / 2
                 # estimate: the floor must be around 1/3rd of the scene
                 # height
-                Z = (z_min + z_max) / 3
+                Z = (z_min + z_max) / 4
 
                 yield((Xi, Yi), dist3((X, Y, Z), (x, y, z)))
 

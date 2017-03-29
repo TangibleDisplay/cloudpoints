@@ -28,12 +28,17 @@ uniform mat4 projection_mat;
 varying vec4 vertex_pos;
 varying float vertex_lum;
 
+float dist(vec3 pos) {
+    return pow(pow(pos.x, 2.) + pow(pos.y, 2.) + pow(pos.z, 2.), .5);
+}
+
 void main (void) {
     //compute vertex position in eye_space and normalize normal vector
     vec4 pos = modelview_mat * vec4(v_pos, 1.0);
     vertex_pos = pos;
     vertex_lum = lum;
     gl_Position = projection_mat * pos;
+    gl_PointSize = 10. / dist(vertex_pos);
 }
 '''
 
@@ -64,6 +69,8 @@ class DataRenderer(Widget):
     nb_points = NumericProperty()
 
     def __init__(self, **kwargs):
+        from kivy.graphics.opengl import glEnable
+        glEnable(0x8642)
         self.canvas = Canvas()
         self.meshes = []
         with self.canvas:
