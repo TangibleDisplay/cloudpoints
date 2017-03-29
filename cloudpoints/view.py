@@ -1,18 +1,18 @@
 # encoding: utf-8
+import q
 
 from kivy.config import Config
 Config.set('input', 'mouse', 'mouse') # noqa
 
-from math import cos, sin, radians, log, exp
+from math import cos, sin, radians, exp
 from object_renderer import DataRenderer
 from kivy.core.window import Window  # noqa
 from kivy.lang import Builder
 from kivy.properties import AliasProperty, DictProperty
 from kivy.clock import Clock
 from kivy.app import App
-from threading import Thread, Lock
+from threading import Thread, Lock, currentThread
 from liblas import file as las
-from os.path import splitext, exists
 from itertools import dropwhile
 
 SYNC = False
@@ -196,6 +196,7 @@ class View(DataRenderer):
                 densities[density] = t = Thread(
                     target=self.fetch_data, args=[box, density])
                 t.daemon = True
+                t.stop = False
                 t.start()
         # else:
         #     for d in densities:
@@ -273,6 +274,8 @@ class View(DataRenderer):
         # self.obj_scale = self.model_scale[0] / 10
 
     def fetch_data(self, box=None, density=None):
+        t = currentThread()
+
         rendering = self
 
         l = 0
@@ -291,6 +294,9 @@ class View(DataRenderer):
 
         with self.lock:
             for i in xrange(i_min, i_max, int(1 / density)):
+                if t.stop:
+                    print "stopping thread"
+                    return
                 # if di and i % densities[di - 1]:
                 #     continue
                 p = f.read(i)
@@ -315,6 +321,10 @@ class View(DataRenderer):
         # meshes.append(rendering.add(points))
         rendering.add(points)
 
+    def stop(self):
+        for l in self.loaders.values():
+            for b in l.values():
+                b.stop = True
 
 KV = '''
 #:import listdir os.listdir
