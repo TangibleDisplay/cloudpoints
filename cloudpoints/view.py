@@ -3,7 +3,7 @@
 from kivy.config import Config
 Config.set('input', 'mouse', 'mouse') # noqa
 
-from math import cos, sin, radians
+from math import cos, sin, radians, log, exp
 from object_renderer import DataRenderer
 from kivy.core.window import Window  # noqa
 from kivy.lang import Builder
@@ -14,6 +14,8 @@ from threading import Thread, Lock
 from liblas import file as las
 from os.path import splitext, exists
 from itertools import dropwhile
+
+SYNC = False
 
 
 def dist(p1, p2):
@@ -116,49 +118,56 @@ class View(DataRenderer):
         return True
 
     def get_boxes(self):
-        CUT = 100
+        x_cut, y_cut = self.cut_size
 
         min_ = self.min_
         max_ = self.max_
-        x, y, z = [int(x) for x in self.cam_translation]
+        x, y, z = [-v for v in self.cam_translation]
+        # x, y, z = self.cam_translation
 
-        x_min, y_min = min_[0], min_[1]
-        x_max, y_max = max_[0], max_[1]
+        x_min, y_min, z_min = min_
+        x_max, y_max, z_max = max_
 
-        x_inc = (x_max - x_max) / CUT
-        y_inc = (y_max - y_max) / CUT
+        x_inc = (x_max - x_min) / x_cut
+        y_inc = (y_max - y_min) / y_cut
 
-        for Xi in xrange(CUT):
-            for Yi in xrange(CUT):
+        for Xi in xrange(x_cut):
+            for Yi in xrange(y_cut):
                 if (Xi, Yi) not in self.indexes:
                     # print "ignoring {},{}".format(Xi, Yi)
                     continue
 
-                X = x_min + Xi * x_inc
-                Y = y_min + Yi * y_inc
+                X = x_min + Xi * x_inc + x_inc / 2
+                Y = y_min + Yi * y_inc + y_inc / 2
+                # estimate: the floor must be around 1/3rd of the scene
+                # height
+                Z = (z_min + z_max) / 3
 
-                yield((Xi, Yi), dist3((X, Y, 0), (x, y, z)))
+                yield((Xi, Yi), dist3((X, Y, Z), (x, y, z)))
 
     def on_cam_translation(self, *args):
         super(View, self).on_cam_translation(*args)
-        boxes = self.get_boxes()
+        boxes = sorted(self.get_boxes(), key=lambda x: x[1])
 
+        max_distance = dist3(self.min_, self.max_)
+        # min_density = 0.001
         distances = [
-            (10 ** 4, 1),
-            (10 ** 5, .1),
-            (10 ** 6, .01),
-            (float('inf'), .001),
+            (exp(x / 3.) * max_distance * .01, (1. / exp(x)))
+            for x in xrange(0, 10)
         ]
 
-        min_d = max_d = float('inf')
-        for box, distance in boxes:
-            min_d = min(min_d, distance)
-            max_d = min(max_d, distance)
+
+        min_distance = boxes[0][1]
+        self.obj_scale = (
+            (1 - (min_distance / max_distance) ** 2) *
+            self.model_scale[0]
+        )
+
+        for i, (box, distance) in enumerate(boxes):
             c = list(dropwhile(lambda x: x[0] < distance, distances))
             density = c[0][1]
             if box in self.indexes:
                 self.load_box(box, density)
-        print min_d, max_d
 
         self.cross.vertices = [
             -self.cam_translation[0], self.min_[1], 0., 1.,
@@ -168,17 +177,26 @@ class View(DataRenderer):
         ]
 
     def load_box(self, box, density):
-        loader = self.loaders.get(box, {}).get(density)
+        densities = self.loaders.setdefault(box, {})
+        loader = densities.get(density)
 
         if not loader:
             # TODO on complete, remove the previous LOD
-            box_loader = self.loaders.setdefault(box, {})
             # box_loader[density] = True
-            # self.fetch_data(box, density)
-            box_loader[density] = t = Thread(
-                target=self.fetch_data, args=[box, density])
-            t.daemon = True
-            t.start()
+            if SYNC:
+                self.fetch_data(box, density)
+            else:
+                densities[density] = t = Thread(
+                    target=self.fetch_data, args=[box, density])
+                t.daemon = True
+                t.start()
+        # else:
+        #     for d in densities:
+        #         for m in self.meshes[(box, d)]:
+        #             if d != density:
+        #                 self.hide(m)
+        #             else:
+        #                 self.show(m)
 
     def on_touch_up(self, touch):
         if touch.grab_current is self:
@@ -208,6 +226,10 @@ class View(DataRenderer):
 
         self.indexes = {}
         with open(filename + '.indexes') as f_indexes:
+            self.cut_size = [
+                int(x) for x in
+                f_indexes.readline().strip().split(',')
+            ]
             for l in f_indexes:
                 box, indexes = l.split(':')
                 self.indexes[
@@ -234,7 +256,6 @@ class View(DataRenderer):
             max_, 10, 20)
 
         Clock.schedule_once(self.go_to_origin)
-        # self.fetch_data(density=.001)
         self.low_loaded = True
 
     def go_to_origin(self, *args):
@@ -242,7 +263,7 @@ class View(DataRenderer):
             self.cam_translation[x] = -(self.max_[x] - self.min_[x]) / 2
 
         self.cam_translation[2] -= 1 / self.model_scale[2] * 100
-        self.obj_scale = self.model_scale[0] / 10
+        # self.obj_scale = self.model_scale[0] / 10
 
     def fetch_data(self, box=None, density=None):
         rendering = self
@@ -261,29 +282,30 @@ class View(DataRenderer):
         o_x, o_y, o_z = self.model_offset
         s_x, s_y, s_z = self.model_scale
 
-        for i in xrange(i_min, i_max, int(1 / density)):
-            # if di and i % densities[di - 1]:
-            #     continue
-            with self.lock:
+        with self.lock:
+            for i in xrange(i_min, i_max, int(1 / density)):
+                # if di and i % densities[di - 1]:
+                #     continue
                 p = f.read(i)
-            x = (p.x - o_x) / s_x
-            y = (p.y - o_y) / s_y
-            z = (p.z - o_z) / s_z
-            lum = max(0, min(p.intensity, 160)) / 160.
+                x = (p.x - o_x) / s_x
+                y = (p.y - o_y) / s_y
+                z = (p.z - o_z) / s_z
+                lum = max(0, min(p.intensity, 160)) / 160.
 
-            # print p.color.red, p.color.green, p.color.blue
-            point = (x, y, z, lum)
-            # print point
-            points.extend(point)
-            if l < 2 ** 12 - 1:
-                l += 1
-            else:
-                rendering.add(points)
-                print i
-                l = 0
-                points = []
-            i += 1
+                # print p.color.red, p.color.green, p.color.blue
+                point = (x, y, z, lum)
+                # print point
+                points.extend(point)
+                if l < 2 ** 12 - 1:
+                    l += 1
+                else:
+                    rendering.add(points)
+                    print i
+                    l = 0
+                    points = []
+                i += 1
 
+        # meshes.append(rendering.add(points))
         rendering.add(points)
 
 
@@ -436,9 +458,12 @@ class App3D(App):
         # XXX hack to force setup_scene call
         root.ids.rendering.mode = 'points'
         import sys
-        t = Thread(target=root.ids.rendering.load_low, args=[sys.argv[1]])
-        t.daemon = True
-        t.start()
+        if SYNC:
+            root.ids.rendering.load_low(sys.argv[1])
+        else:
+            t = Thread(target=root.ids.rendering.load_low, args=[sys.argv[1]])
+            t.daemon = True
+            t.start()
         return root
 
 
