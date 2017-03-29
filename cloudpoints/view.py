@@ -79,8 +79,8 @@ class View(DataRenderer):
             return
 
         elif len(self.touches) == 1:
-            self.cam_rotation[2] += self.touches[0].dx / 10.  # pitch
-            self.cam_rotation[0] -= self.touches[0].dy / 10.  # yaw
+            self.cam_rotation[2] -= self.touches[0].dx / 10.  # pitch
+            self.cam_rotation[0] += self.touches[0].dy / 10.  # yaw
 
         else:
             c = self.get_center()
