@@ -81,13 +81,14 @@ class View(DataRenderer):
         elif len(self.touches) == 1:
             self.cam_rotation[2] -= self.touches[0].dx / 10.  # pitch
             self.cam_rotation[0] += self.touches[0].dy / 10.  # yaw
+            self.cam_rotation[0] = max(-180, min(0, self.cam_rotation[0]))
 
         else:
             c = self.get_center()
             d = self.get_dist(c)
 
             vec = self.direction_vector
-            zoom = min(1, max(-1, (d - self.touches_dist) / 10.))
+            zoom = min(1, max(-1, (d - self.touches_dist) / 5.))
 
             # get the cross product of direction vector to vertical
             # axis, to get our first translation vector
