@@ -29,13 +29,12 @@ varying vec4 vertex_pos;
 varying float vertex_lum;
 
 void main (void) {
-    //compute vertex position in eye_sapce and normalize normal vector
-    vec4 pos = modelview_mat * vec4(v_pos,1.0);
+    //compute vertex position in eye_space and normalize normal vector
+    vec4 pos = modelview_mat * vec4(v_pos, 1.0);
     vertex_pos = pos;
     vertex_lum = lum;
     gl_Position = projection_mat * pos;
 }
-
 '''
 
 FS = '''
