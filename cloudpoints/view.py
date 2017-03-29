@@ -87,7 +87,7 @@ class View(DataRenderer):
             d = self.get_dist(c)
 
             vec = self.direction_vector
-            zoom = min(5, max(-5, (d - self.touches_dist)))
+            zoom = min(1, max(-1, (d - self.touches_dist) / 10.))
 
             # get the cross product of direction vector to vertical
             # axis, to get our first translation vector
@@ -109,9 +109,9 @@ class View(DataRenderer):
             )
 
             ct = self.cam_translation
-            ct[0] += (vec[0] * zoom + strafe_vector[0] / 50.) * 10000
-            ct[1] += (vec[1] * zoom + strafe_vector[1] / 50.) * 10000
-            ct[2] += (vec[2] * zoom + strafe_vector[2] / 50.) * 10000
+            ct[0] += (vec[0] * zoom + strafe_vector[0] / 5.) * 10000
+            ct[1] += (vec[1] * zoom + strafe_vector[1] / 5.) * 10000
+            ct[2] += (vec[2] * zoom + strafe_vector[2] / 5.) * 10000
 
             self.touches_center = c
             self.touches_dist = d
