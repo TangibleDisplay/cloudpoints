@@ -147,6 +147,10 @@ class View(DataRenderer):
 
     def on_cam_translation(self, *args):
         super(View, self).on_cam_translation(*args)
+        Clock.unschedule(self.update_lod)
+        Clock.schedule_once(self.update_lod, .2)
+
+    def update_lod(self, *args):
         boxes = sorted(self.get_boxes(), key=lambda x: x[1])
 
         max_distance = dist3(self.min_, self.max_)
@@ -165,6 +169,8 @@ class View(DataRenderer):
 
         for i, (box, distance) in enumerate(boxes):
             c = list(dropwhile(lambda x: x[0] < distance, distances))
+            if not c:
+                continue
             density = c[0][1]
             if box in self.indexes:
                 self.load_box(box, density)
