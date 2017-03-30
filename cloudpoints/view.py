@@ -1,6 +1,4 @@
 # encoding: utf-8
-import q
-
 from kivy.config import Config
 Config.set('input', 'mouse', 'mouse') # noqa
 
