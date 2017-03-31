@@ -284,9 +284,6 @@ class View(DataRenderer):
         for x in range(3):
             self.cam_translation[x] = -(self.max_[x] - self.min_[x]) / 2
 
-        self.cam_translation[2] -= 1 / self.model_scale[2] * 100
-        # self.obj_scale = self.model_scale[0] / 10
-
     def fetch_data(self, box=None, density=None):
         t = currentThread()
 
