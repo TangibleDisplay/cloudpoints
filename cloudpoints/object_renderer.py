@@ -45,7 +45,7 @@ void main (void) {
     gl_Position = projection_mat * pos;
     float d = dist(vertex_pos.xyz);
     gl_PointSize = 10. / d;
-    vertex_lum = lum * (1 - d / 1000.);
+    vertex_lum = lum * (1. - d / 1000.);
 }
 '''
 
