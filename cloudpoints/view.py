@@ -76,12 +76,16 @@ class View(DataRenderer):
         if not self.touches:
             return
 
-        elif len(self.touches) == 1:
+        if len(self.touches) == 1:
             self.cam_rotation[2] -= self.touches[0].dx / 10.  # pitch
             self.cam_rotation[0] += self.touches[0].dy / 10.  # yaw
             self.cam_rotation[0] = max(-180, min(0, self.cam_rotation[0]))
 
         else:
+            t = self.touches[0]
+            t.push()
+            t.apply_transform_2d(self.to_widget)
+
             c = self.get_center()
             d = self.get_dist(c)
 
@@ -114,6 +118,9 @@ class View(DataRenderer):
 
             self.touches_center = c
             self.touches_dist = d
+
+            t.pop()
+
         return True
 
     def get_boxes(self):
@@ -208,8 +215,17 @@ class View(DataRenderer):
         if touch.grab_current is self:
             touch.ungrab(self)
             self.touches.remove(touch)
+
+            if self.touches:
+                t = self.touches[0]
+                t.push()
+                t.apply_transform_2d(self.to_widget)
+
             self.touches_center = self.get_center()
             self.touches_dist = self.get_dist(self.touches_center)
+
+            if self.touches:
+                t.pop()
             return True
         else:
             return super(View, self).on_touch_up(touch)
