@@ -1,13 +1,19 @@
-from os.path import join, dirname
+from base64 import b64decode
+import io
+
+from uuid import uuid4
 from kivy.uix.widget import Widget
 from kivy.graphics.fbo import Fbo
 from kivy.graphics import (
     Callback, PushMatrix, PopMatrix, Rotate, Translate, Scale,
-    Rectangle, Color, Mesh, UpdateNormalMatrix, Canvas, InstructionGroup
+    Rectangle, Color, Mesh, UpdateNormalMatrix, Canvas,
+    InstructionGroup, BindTexture
 )
 from kivy.graphics.transformation import Matrix
+from kivy.core.image import Image as CoreImage
 from kivy.graphics.opengl import (
-    glEnable, glDisable, GL_DEPTH_TEST)
+    glBlendFunc, glDepthMask, GL_FALSE, glEnable, glDisable,
+    GL_DEPTH_TEST)
 from kivy.properties import (
     StringProperty, ListProperty, ObjectProperty, NumericProperty,
     DictProperty)
@@ -36,24 +42,50 @@ void main (void) {
     //compute vertex position in eye_space and normalize normal vector
     vec4 pos = modelview_mat * vec4(v_pos, 1.0);
     vertex_pos = pos;
-    vertex_lum = lum;
     gl_Position = projection_mat * pos;
-    gl_PointSize = 10. / dist(vertex_pos);
+    float d = dist(vertex_pos.xyz);
+    gl_PointSize = 10. / d;
+    vertex_lum = lum * (1 - d / 1000.);
 }
 '''
 
 FS = '''
+#version 120
 #ifdef GL_ES
     precision highp float;
 #endif
 
+uniform sampler2D tex;
+
 varying vec4 vertex_pos;
 varying float vertex_lum;
 
+float dist(vec2 pos) {
+    return pow(pow(pos.x, 2.) + pow(pos.y, 2.), .5);
+}
+
 void main (void){
-    gl_FragColor = vec4(1.0, 1.0, 1.0, vertex_lum);
+    vec4 col = texture2D(tex, gl_PointCoord);
+    gl_FragColor = vec4(col.r, col.g, col.b, col.a * vertex_lum);
 }
 '''
+
+# base64 conversion of png texture
+POINT_TEXTURE = b64decode('''
+iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAQAAAAnOwc2AAAAAmJLR0QA/4ePzL8AAAAJcEhZcwAA
+CxMAAAsTAQCanBgAAAAHdElNRQfhAx8JICD/LWB7AAAAGXRFWHRDb21tZW50AENyZWF0ZWQgd2l0
+aCBHSU1QV4EOFwAAAJFJREFUCNc9zj1LQlEAgOHnXA4JikIggh+pWOik0Nbu73dRF1MHRQkk6IYE
+IXKPQ9g7PeMbSCNDbQPkDvbeYxoZejPxhNzWgqjj1dRAFb+aHpyjnrG+mgxlLS+OUV1LRRAESfSo
+kbkX/iXz6cOPpFAoXOVO0c5SV6aKi5ONdXQwUzLWlXzbmNvGsEqw84yvv/kbCqMrgSb2mY8AAAAA
+SUVORK5CYII=
+''')
+
+GL_PROGRAM_POINT_SIZE = 0x8642
+GL_POINT_SPRITE = 0x8861
+GL_BLEND = 0x0BE2
+GL_SRC_ALPHA = 0x0302
+GL_ONE = 0x0001
+GL_ONE_MINUS_SRC_ALPHA = 0x0303
 
 
 class DataRenderer(Widget):
@@ -69,8 +101,11 @@ class DataRenderer(Widget):
     nb_points = NumericProperty()
 
     def __init__(self, **kwargs):
-        from kivy.graphics.opengl import glEnable
-        glEnable(0x8642)
+        glEnable(GL_PROGRAM_POINT_SIZE)
+        glEnable(GL_POINT_SPRITE)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glDepthMask(GL_FALSE)
         self.canvas = Canvas()
         self.meshes = []
         with self.canvas:
@@ -115,6 +150,9 @@ class DataRenderer(Widget):
             PushMatrix()
             self.setup_scene()
             PopMatrix()
+            data = io.BytesIO(POINT_TEXTURE)
+            im = CoreImage(data, ext="png")
+            BindTexture(texture=im.texture, index=1)
             self.cb = Callback(self.reset_gl_context)
 
     def on_size(self, instance, value):
@@ -140,6 +178,7 @@ class DataRenderer(Widget):
         asp = self.width / float(self.height)
         proj = Matrix().view_clip(-asp, asp, -1, 1, 1, 100, 1)
         self.fbo['projection_mat'] = proj
+        self.fbo['tex'] = 1
         # view = Matrix()
         # fovy = 90.
         # view.perspective(
