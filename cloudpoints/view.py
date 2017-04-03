@@ -73,15 +73,16 @@ class View(DataRenderer):
         get_direction_vector, bind=['cam_rotation'])
 
     def update_cam(self, dt):
-        if not self.touches:
-            return
+        touches = self.touches
 
         if len(self.touches) == 1:
-            self.cam_rotation[2] -= self.touches[0].dx / 10.  # pitch
-            self.cam_rotation[0] += self.touches[0].dy / 10.  # yaw
-            self.cam_rotation[0] = max(-180, min(0, self.cam_rotation[0]))
+            rot = self.cam_rotation[:]
+            rot[2] -= touches[0].dx / 10.  # pitch
+            rot[0] += touches[0].dy / 10.  # yaw
+            rot[0] = max(-180, min(0, rot[0]))
+            self.cam_rotation = rot
 
-        else:
+        if len(self.touches) > 1:
             t = self.touches[0]
             t.push()
             t.apply_transform_2d(self.to_widget)
@@ -121,7 +122,6 @@ class View(DataRenderer):
 
             t.pop()
 
-        return True
 
     def get_boxes(self):
         x_cut, y_cut = self.cut_size
@@ -152,7 +152,6 @@ class View(DataRenderer):
                 yield((Xi, Yi), dist3((X, Y, Z), (x, y, z)))
 
     def on_cam_translation(self, *args):
-        super(View, self).on_cam_translation(*args)
         Clock.unschedule(self.update_lod)
         Clock.schedule_once(self.update_lod, .2)
 

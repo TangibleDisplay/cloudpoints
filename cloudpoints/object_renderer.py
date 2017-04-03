@@ -18,7 +18,7 @@ from kivy.properties import (
     StringProperty, ListProperty, ObjectProperty, NumericProperty,
     DictProperty)
 
-from kivy.clock import mainthread
+from kivy.clock import Clock, mainthread
 
 VS = '''
 #ifdef GL_ES
@@ -77,8 +77,8 @@ CxMAAAsTAQCanBgAAAAHdElNRQfhAx8JICD/LWB7AAAAGXRFWHRDb21tZW50AENyZWF0ZWQgd2l0
 aCBHSU1QV4EOFwAAAJFJREFUCNc9zj1LQlEAgOHnXA4JikIggh+pWOik0Nbu73dRF1MHRQkk6IYE
 IXKPQ9g7PeMbSCNDbQPkDvbeYxoZejPxhNzWgqjj1dRAFb+aHpyjnrG+mgxlLS+OUV1LRRAESfSo
 kbkX/iXz6cOPpFAoXOVO0c5SV6aKi5ONdXQwUzLWlXzbmNvGsEqw84yvv/kbCqMrgSb2mY8AAAAA
-SUVORK5CYII=
-''')
+SUVORK5CYII=''')
+
 
 GL_PROGRAM_POINT_SIZE = 0x8642
 GL_POINT_SPRITE = 0x8861
@@ -119,14 +119,21 @@ class DataRenderer(Widget):
         self.fbo.shader.vs = VS
         self.fbo.shader.fs = FS
         print "shader:", self.fbo.shader.source
+
+        rotate_cam = Clock.create_trigger(self._rotate_cam, timeout=.01)
+        self.bind(cam_rotation=rotate_cam)
+
+        move_cam = Clock.create_trigger(self._move_cam, timeout=.01)
+        self.bind(cam_translation=move_cam)
+
         super(DataRenderer, self).__init__(**kwargs)
 
-    def on_cam_rotation(self, *args):
+    def _rotate_cam(self, *args):
         self.cam_rot_x.angle = self.cam_rotation[0]
         self.cam_rot_y.angle = self.cam_rotation[1]
         self.cam_rot_z.angle = self.cam_rotation[2]
 
-    def on_cam_translation(self, *args):
+    def _move_cam(self, *args):
         self.cam_translate.xyz = self.cam_translation
         self.cam_rot_x.origin = [-x for x in self.cam_translate.xyz]
         self.cam_rot_y.origin = [-x for x in self.cam_translate.xyz]
