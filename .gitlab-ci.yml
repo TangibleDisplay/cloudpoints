@@ -10,7 +10,7 @@ linux:
 
 osx:
   tags:
-    - linux
+    - osx
   script:
     - python setup.py bdist_wheel
 
