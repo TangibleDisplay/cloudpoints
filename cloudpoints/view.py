@@ -165,8 +165,8 @@ class View(DataRenderer):
         max_distance = dist3(self.min_, self.max_)
         # min_density = 0.001
         distances = [
-            (exp(x / 3.) * max_distance * .01, (1. / exp(x)))
-            for x in xrange(0, 10)
+            (exp(x / 4.) * max_distance * .01, (1. / exp(x / 2.)))
+            for x in xrange(0, 11)
         ]
 
         min_distance = boxes[0][1]
