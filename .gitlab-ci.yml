@@ -8,15 +8,15 @@ linux:
     paths:
       - dist/*.whl
 
-osx:
-  tags:
-    - osx
-  script:
-    - python setup.py bdist_wheel
-
-  artifacts:
-    paths:
-      - dist/*.whl
+# osx:
+#   tags:
+#     - osx
+#   script:
+#     - python setup.py bdist_wheel
+# 
+#   artifacts:
+#     paths:
+#       - dist/*.whl
 
 windows:
   tags:
