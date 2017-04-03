@@ -36,7 +36,7 @@ promote:
   dependencies:
     - windows
     - linux
-    - osx
+      # - osx
 
   when: manual
 
