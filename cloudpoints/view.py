@@ -6,12 +6,13 @@ from math import cos, sin, radians, exp
 from object_renderer import DataRenderer
 from kivy.core.window import Window  # noqa
 from kivy.lang import Builder
-from kivy.properties import AliasProperty, DictProperty
-from kivy.clock import Clock
+from kivy.properties import AliasProperty, DictProperty, ListProperty
+from kivy.clock import Clock, mainthread
 from kivy.app import App
-from threading import Thread, Lock, currentThread
+from threading import Thread
 from liblas import file as las
 from itertools import dropwhile
+from time import sleep
 
 SYNC = False
 
@@ -37,7 +38,8 @@ def cross(a, b):
 
 
 class View(DataRenderer):
-    loaders = DictProperty()
+    meshes = DictProperty()
+    box_queue = ListProperty()
 
     def __init__(self, **kwargs):
         super(View, self).__init__(**kwargs)
@@ -45,6 +47,8 @@ class View(DataRenderer):
         self.touches_center = []
         self.touches_dist = 0
         Clock.schedule_interval(self.update_cam, 0)
+        self.loaded_boxes = set()
+        self.stop = False
 
     def on_touch_down(self, touch):
         if super(View, self).on_touch_down(touch):
@@ -165,13 +169,13 @@ class View(DataRenderer):
             for x in xrange(0, 10)
         ]
 
-
         min_distance = boxes[0][1]
         self.obj_scale = (
             (1 - (min_distance / max_distance) ** 2) *
             self.model_scale[0]
         )
 
+        self.box_queue = []
         for i, (box, distance) in enumerate(boxes):
             c = list(dropwhile(lambda x: x[0] < distance, distances))
             if not c:
@@ -188,27 +192,11 @@ class View(DataRenderer):
         ]
 
     def load_box(self, box, density):
-        densities = self.loaders.setdefault(box, {})
-        loader = densities.get(density)
-
-        if not loader:
-            # TODO on complete, remove the previous LOD
-            # box_loader[density] = True
-            if SYNC:
-                self.fetch_data(box, density)
-            else:
-                densities[density] = t = Thread(
-                    target=self.fetch_data, args=[box, density])
-                t.daemon = True
-                t.stop = False
-                t.start()
-        # else:
-        #     for d in densities:
-        #         for m in self.meshes[(box, d)]:
-        #             if d != density:
-        #                 self.hide(m)
-        #             else:
-        #                 self.show(m)
+        if (
+            (box, density) not in self.box_queue and
+            (box, density) not in self.loaded_boxes
+        ):
+            self.box_queue.append((box, density))
 
     def on_touch_up(self, touch):
         if touch.grab_current is self:
@@ -242,9 +230,6 @@ class View(DataRenderer):
         ) / float(len(self.touches))) if self.touches else 0
 
     def load_low(self, filename):
-        self.lock = Lock()
-        self.low_loaded = False
-
         self.indexes = {}
         with open(filename + '.indexes') as f_indexes:
             self.cut_size = [
@@ -277,16 +262,30 @@ class View(DataRenderer):
             max_, 10, 20)
 
         Clock.schedule_once(self.go_to_origin)
-        self.low_loaded = True
+
+        t = Thread(target=self.data_fetcher)
+        t.daemon = True
+        t.start()
 
     def go_to_origin(self, *args):
         for x in range(3):
             self.cam_translation[x] = -(self.max_[x] - self.min_[x]) / 2
 
+    def data_fetcher(self):
+        print "data fetcher started"
+        while True:
+            if self.box_queue:
+                box, density = self.box_queue.pop(0)
+                print "loading {}:{}".format(box, density)
+                self.fetch_data(box=box, density=density)
+                self.loaded_boxes.add((box, density))
+            else:
+                sleep(.1)
+
     def fetch_data(self, box=None, density=None):
-        t = currentThread()
 
         rendering = self
+        self.meshes[(box, density)] = meshes = []
 
         l = 0
         points = []
@@ -302,39 +301,36 @@ class View(DataRenderer):
         o_x, o_y, o_z = self.model_offset
         s_x, s_y, s_z = self.model_scale
 
-        with self.lock:
-            for i in xrange(i_min, i_max, int(1 / density)):
-                if t.stop:
-                    print "stopping thread"
-                    return
-                # if di and i % densities[di - 1]:
-                #     continue
-                p = f.read(i)
-                x = (p.x - o_x) / s_x
-                y = (p.y - o_y) / s_y
-                z = (p.z - o_z) / s_z
-                lum = max(0, min(p.intensity, 160)) / 160.
+        for i in xrange(i_min, i_max, int(1 / density)):
+            if self.stop:
+                print "stopping thread"
+                return
+            p = f.read(i)
+            x = (p.x - o_x) / s_x
+            y = (p.y - o_y) / s_y
+            z = (p.z - o_z) / s_z
+            lum = max(0, min(p.intensity, 160)) / 160.
 
-                # print p.color.red, p.color.green, p.color.blue
-                point = (x, y, z, lum)
-                # print point
-                points.extend(point)
-                if l < 2 ** 12 - 1:
-                    l += 1
-                else:
-                    rendering.add(points)
-                    print i
-                    l = 0
-                    points = []
-                i += 1
+            # print p.color.red, p.color.green, p.color.blue
+            point = (x, y, z, lum)
+            # print point
+            points.extend(point)
+            if l < 2 ** 12 - 1:
+                l += 1
+            else:
+                meshes.append(rendering.add(points))
+                # rendering.add(points)
+                print 'nb_points', i
+                l = 0
+                points = []
+            i += 1
 
-        # meshes.append(rendering.add(points))
-        rendering.add(points)
+        meshes.append(rendering.add(points))
+        # rendering.add(points)
 
     def stop(self):
-        for l in self.loaders.values():
-            for b in l.values():
-                b.stop = True
+        self.box_queue = []
+        self.stop = True
 
 KV = '''
 #:import listdir os.listdir

@@ -196,7 +196,6 @@ class DataRenderer(Widget):
         # )
         # self.fbo['modelview_mat'] = view
 
-    @mainthread
     def add(self, data):
         m = Mesh(
             fmt=[('v_pos', 3, 'float'), ('lum', 1, 'float')],
@@ -205,8 +204,27 @@ class DataRenderer(Widget):
             indices=range(len(data) / 4)
         )
         self.nb_points += len(data) / 4
-        self.rendering.add(m)
+        uid = uuid4()
+        self.meshes[uid] = m
+        self.show(uid)
+        # self.rendering.add(m)
+        return uid
         # print "added mesh", m
+
+    @mainthread
+    def show(self, mesh_uid):
+        mesh = self.meshes[mesh_uid]
+        # XXX probably very inneficient, would be better to put the info
+        # in the mesh itself
+        if mesh not in self.rendering.children:
+            self.rendering.add(mesh)
+
+    @mainthread
+    def hide(self, mesh_uid):
+        mesh = self.meshes[mesh_uid]
+        # XXX see show()
+        if mesh in self.rendering.children:
+            self.rendering.remove(mesh)
 
     @mainthread
     def add_grid(self, min_, max_, medium_range, high_range):
