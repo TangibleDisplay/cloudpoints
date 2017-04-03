@@ -48,7 +48,7 @@ class View(DataRenderer):
         self.touches_dist = 0
         Clock.schedule_interval(self.update_cam, 0)
         self.loaded_boxes = set()
-        self.stop = False
+        self._stop = False
 
     def on_touch_down(self, touch):
         if super(View, self).on_touch_down(touch):
@@ -302,7 +302,7 @@ class View(DataRenderer):
         s_x, s_y, s_z = self.model_scale
 
         for i in xrange(i_min, i_max, int(1 / density)):
-            if self.stop:
+            if self._stop:
                 print "stopping thread"
                 return
             p = f.read(i)
@@ -330,7 +330,7 @@ class View(DataRenderer):
 
     def stop(self):
         self.box_queue = []
-        self.stop = True
+        self._stop = True
 
 KV = '''
 #:import listdir os.listdir
