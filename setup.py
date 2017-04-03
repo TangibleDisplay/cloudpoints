@@ -3,7 +3,7 @@ from Cython.Build import cythonize
 from subprocess import check_output
 
 
-VERSION = check_output(['git', 'describe', '--tags'])[1:].replace('-', '.')
+VERSION = check_output(['git', 'describe', '--tags'])[1:].replace('-', '.', 1)
 
 
 setup(
