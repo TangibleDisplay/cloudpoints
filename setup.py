@@ -1,10 +1,9 @@
-from setuptools import setup, Extension
+from setuptools import setup
 from Cython.Build import cythonize
-from Cython.Distutils import build_ext
 from subprocess import check_output
 
 
-VERSION = check_output(['git', 'describe', '--tags'])
+VERSION = check_output(['git', 'describe', '--tags'])[1:].replace('-', '.')
 
 
 setup(
