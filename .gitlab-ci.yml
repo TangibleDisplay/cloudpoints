@@ -38,7 +38,7 @@ promote:
     - linux
       # - osx
 
-  when: manual
+  when: on_success
 
   script:
       - pushd dist
