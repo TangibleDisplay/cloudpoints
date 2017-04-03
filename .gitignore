@@ -2,6 +2,8 @@
 *.swp
 *.un~
 *.pyc
+*.c
+*.so
 dist/
 build/
 *.egg-info/

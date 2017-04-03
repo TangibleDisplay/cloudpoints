@@ -1,8 +1,28 @@
-wheel:
+linux:
   tags:
     - linux
   script:
     - python setup.py bdist_wheel
+
+  artifacts:
+    paths:
+      - dist/*.whl
+
+osx:
+  tags:
+    - linux
+  script:
+    - python setup.py bdist_wheel
+
+  artifacts:
+    paths:
+      - dist/*.whl
+
+windows:
+  tags:
+    - windows
+  script:
+    - call C:\Kivy\kivy-mingw64.bat make dist
 
   artifacts:
     paths:
@@ -14,7 +34,9 @@ promote:
     - linux
 
   dependencies:
-    - wheel
+    - windows
+    - linux
+    - osx
 
   when: manual
 
