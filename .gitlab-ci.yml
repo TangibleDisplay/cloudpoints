@@ -22,7 +22,7 @@ windows:
   tags:
     - windows
   script:
-    - call C:\Kivy\kivy-mingw64.bat make dist
+    - python setup.py bdist_wheel
 
   artifacts:
     paths:
