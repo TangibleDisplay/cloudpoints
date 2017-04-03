@@ -3,7 +3,14 @@ from Cython.Build import cythonize
 from subprocess import check_output
 
 
-VERSION = check_output(['git', 'describe', '--tags'])[1:].replace('-', '.', 1)
+# remove the leading v from the tag
+# replace the first '-' with a '.' (so commit id is part of version),
+# maybe a bad idea?
+# remove the final \n (to avoid it being replaced with a dash
+
+VERSION = check_output(
+    ['git', 'describe', '--tags']
+)[1:].replace('-', '.', 1).strip()
 
 
 setup(
