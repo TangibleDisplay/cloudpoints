@@ -12,8 +12,7 @@ from kivy.graphics import (
 from kivy.graphics.transformation import Matrix
 from kivy.core.image import Image as CoreImage
 from kivy.graphics.opengl import (
-    glBlendFunc, glDepthMask, GL_FALSE, glEnable, glDisable,
-    GL_DEPTH_TEST)
+    glBlendFunc, GL_FALSE, glEnable, glDisable)
 from kivy.properties import (
     StringProperty, ListProperty, ObjectProperty, NumericProperty,
     DictProperty)
@@ -105,7 +104,6 @@ class DataRenderer(Widget):
         glEnable(GL_POINT_SPRITE)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glDepthMask(GL_FALSE)
         self.canvas = Canvas()
         self.meshes = []
         with self.canvas:
@@ -175,11 +173,10 @@ class DataRenderer(Widget):
         self.viewport.texture = value
 
     def setup_gl_context(self, *args):
-        glEnable(GL_DEPTH_TEST)
         self.fbo.clear_buffer()
 
     def reset_gl_context(self, *args):
-        glDisable(GL_DEPTH_TEST)
+        pass
 
     def update_glsl(self, *args):
         asp = self.width / float(self.height)
