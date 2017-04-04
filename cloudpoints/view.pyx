@@ -40,6 +40,15 @@ def cross(a, b):
 class View(DataRenderer):
     meshes = DictProperty()
     box_queue = ListProperty()
+    '''
+    motion of the camera, on x, y, z, at each frame the camera will be
+    moved along the x, y, z direction *according to its own orientation,
+    projected on the xy plane*
+
+    for example, [0, 1, 0] will set the camera in a forward motion,
+    [-1, 0, 0] will strafe to the left, [0, 0, 1] will move down.
+    '''
+    cam_motion = ListProperty([0, 0, 0])
 
     def __init__(self, **kwargs):
         super(View, self).__init__(**kwargs)
@@ -78,6 +87,23 @@ class View(DataRenderer):
 
     def update_cam(self, dt):
         touches = self.touches
+
+        motion = self.cam_motion
+        if motion[0]:
+            vec = cross(self.direction_vector, (0, 0, 1))
+            self.cam_translation[0] -= dt * motion[0] * vec[0] / self.model_scale[0]
+            self.cam_translation[1] -= dt * motion[0] * vec[1] / self.model_scale[1]
+            self.cam_translation[2] -= dt * motion[0] * vec[2] / self.model_scale[2]
+
+
+        if motion[1]:
+            vec = cross(cross(self.direction_vector, (0, 0, 1)), (0, 0, 1))
+            self.cam_translation[0] -= dt * motion[1] * vec[0] / self.model_scale[0]
+            self.cam_translation[1] -= dt * motion[1] * vec[1] / self.model_scale[1]
+            self.cam_translation[2] -= dt * motion[1] * vec[2] / self.model_scale[2]
+
+        if motion[2]:
+            self.cam_translation[2] -= dt * motion[2] * 1. / self.model_scale[2]
 
         if len(self.touches) == 1:
             rot = self.cam_rotation[:]
@@ -156,8 +182,7 @@ class View(DataRenderer):
                 yield((Xi, Yi), dist3((X, Y, Z), (x, y, z)))
 
     def on_cam_translation(self, *args):
-        Clock.unschedule(self.update_lod)
-        Clock.schedule_once(self.update_lod, .2)
+        self.update_lod()
 
     def update_lod(self, *args):
         boxes = sorted(self.get_boxes(), key=lambda x: x[1])
@@ -270,6 +295,8 @@ class View(DataRenderer):
     def go_to_origin(self, *args):
         for x in range(3):
             self.cam_translation[x] = -(self.max_[x] - self.min_[x]) / 2
+            self.cam_rotation[x] = 0
+
 
     def data_fetcher(self):
         print "data fetcher started"
@@ -449,12 +476,7 @@ FloatLayout:
                 Button:
                     text: 'go'
                     on_press:
-                        rendering.cam_translation[0] = -5500000
-                        rendering.cam_translation[1] = -4000000
-                        rendering.cam_translation[2] = -100000
-                        rendering.cam_rotation[0] = -100
-                        rendering.cam_rotation[2] = -100
-                        rendering.obj_scale = 8 * 10 ** -5
+                        rendering.go_to_origin()
                 ToggleButton:
                     text: 'grid'
                     on_state:
