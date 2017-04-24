@@ -116,8 +116,8 @@ class DataRenderer(Widget):
 
         self.fbo.shader.vs = VS
         self.fbo.shader.fs = FS
-        print "shader:", self.fbo.shader.source
 
+        print("shader:", self.fbo.shader.source)
         rotate_cam = Clock.create_trigger(self._rotate_cam, timeout=.01)
         self.bind(cam_rotation=rotate_cam)
 
@@ -149,7 +149,7 @@ class DataRenderer(Widget):
         self.setup_canvas()
 
     def setup_canvas(self, *args):
-        print 'setting up the scene'
+        print('setting up the scene')
         with self.fbo:
             self.cb = Callback(self.setup_gl_context)
             PushMatrix()
@@ -206,7 +206,8 @@ class DataRenderer(Widget):
         self.show(uid)
         # self.rendering.add(m)
         return uid
-        # print "added mesh", m
+        # print("added mesh", m)
+        self.rendering.add(m)
 
     @mainthread
     def show(self, mesh_uid):

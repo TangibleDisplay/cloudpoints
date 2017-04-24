@@ -18,7 +18,7 @@ for i, p in enumerate(f_input):
     z_min = min(z_min, p.z)
     z_max = max(z_max, p.z)
     if not i % 1000:
-        print '.',
+        print('.',)
 
     box = (
         100 * (p.x - x_min) // (x_max - x_min),
@@ -31,19 +31,19 @@ for i, p in enumerate(f_input):
 h = f_input.header
 h.min = x_min, y_min, z_min
 h.max = x_max, y_max, z_max
-print "z_min, z_max", z_min, z_max
+print("z_min, z_max", z_min, z_max)
 
 f_output = Las(expanduser(argv[2]), mode='w', header=h)
 i = 0
 
-print "done building boxes"
+print("done building boxes")
 with open(index_file, mode='w') as f_indexes:
     f_indexes.write('{},{}\n'.format(CUT, CUT))
 
     for x in range(CUT):
-        print '\n{}\t'.format(x),
+        print('\n{}\t'.format(x),)
         for y in range(CUT):
-            print '.',
+            print('.',)
             box = boxes.get((x, y))
             if not box:
                 continue

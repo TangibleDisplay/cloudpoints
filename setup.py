@@ -10,7 +10,7 @@ from subprocess import check_output
 
 VERSION = check_output(
     ['git', 'describe', '--tags']
-)[1:].replace('-', '.', 1).strip()
+).decode('utf-8')[1:].replace('-', '.', 1).strip()
 
 
 setup(

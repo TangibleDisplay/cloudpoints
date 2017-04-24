@@ -3,7 +3,6 @@ from kivy.config import Config
 Config.set('input', 'mouse', 'mouse') # noqa
 
 from math import cos, sin, radians, exp
-from object_renderer import DataRenderer
 from kivy.core.window import Window  # noqa
 from kivy.lang import Builder
 from kivy.properties import AliasProperty, DictProperty, ListProperty
@@ -13,6 +12,8 @@ from threading import Thread
 from liblas import file as las
 from itertools import dropwhile
 from time import sleep
+
+from cloudpoints.object_renderer import DataRenderer
 
 SYNC = False
 
@@ -330,7 +331,7 @@ class View(DataRenderer):
 
         for i in xrange(i_min, i_max, int(1 / density)):
             if self._stop:
-                print "stopping thread"
+                print("stopping thread")
                 return
             p = f.read(i)
             x = (p.x - o_x) / s_x
@@ -347,7 +348,7 @@ class View(DataRenderer):
             else:
                 meshes.append(rendering.add(points))
                 # rendering.add(points)
-                print 'nb_points', i
+                print('nb_points', i)
                 l = 0
                 points = []
             i += 1
