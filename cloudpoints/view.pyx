@@ -1,6 +1,5 @@
 # encoding: utf-8
 from kivy.config import Config
-Config.set('input', 'mouse', 'mouse') # noqa
 
 from math import cos, sin, radians, exp
 from kivy.core.window import Window  # noqa
