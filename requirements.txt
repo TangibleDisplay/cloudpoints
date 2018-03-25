@@ -1,2 +1,3 @@
+Cython==0.26
 liblas
 kivy
