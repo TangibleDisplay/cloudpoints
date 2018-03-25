@@ -20,9 +20,13 @@ linux:
 
 windows:
   tags:
-    - windows
+    - docker
+  image:
+    name: tshirtman/kpmwine
+    entrypoint: [""]
   script:
-    - python setup.py bdist_wheel
+    - pip install -r requirements.txt
+    - /entrypoint.sh python setup.py bdist_wheel
 
   artifacts:
     paths:
