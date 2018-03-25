@@ -9,7 +9,8 @@ from subprocess import check_output
 # remove the final \n (to avoid it being replaced with a dash
 
 VERSION = check_output(
-    ['git', 'describe', '--tags']
+    ['git', 'describe', '--tags'],
+    shell=True
 ).decode('utf-8')[1:].replace('-', '.', 1).strip()
 
 
