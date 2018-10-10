@@ -31,23 +31,3 @@ windows:
   artifacts:
     paths:
       - dist/*.whl
-
-promote:
-  stage: deploy
-  tags:
-    - linux
-
-  dependencies:
-    - windows
-    - linux
-      # - osx
-
-  when: on_success
-
-  script:
-      - pushd dist
-      - ssh pypi@pypi.lab.tdl.io mkdir -p /SYSEXT/data/pypi.lab.tdl.io/simple/cloudpoints/
-      - scp *.whl pypi@pypi.lab.tdl.io:/SYSEXT/data/pypi.lab.tdl.io/simple/cloudpoints/
-      - ssh pypi@pypi.lab.tdl.io /SYSEXT/data/pypi.lab.tdl.io/semver_link.py cloudpoints $(ls *linux*.whl | head -n 1)
-      - ssh pypi@pypi.lab.tdl.io /SYSEXT/data/pypi.lab.tdl.io/semver_link.py cloudpoints $(ls *win*.whl | head -n 1)
-      - popd

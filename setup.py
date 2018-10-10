@@ -1,6 +1,7 @@
 from setuptools import setup
 from Cython.Build import cythonize
 from subprocess import check_output
+from os.path import exists
 
 
 # remove the leading v from the tag
@@ -8,10 +9,18 @@ from subprocess import check_output
 # maybe a bad idea?
 # remove the final \n (to avoid it being replaced with a dash
 
-VERSION = check_output(
-    ['git', 'describe', '--tags'],
-    shell=True
-).decode('utf-8')[1:].replace('-', '.', 1).strip()
+if exists('version.txt'):
+    with open('version.txt') as fd:
+        VERSION = fd.read().strip()[1:].replace('-', '.', 1).split('-')[0]
+
+else:
+    try:
+        VERSION = check_output(
+            ['git', 'describe', '--tags'],
+            shell=True
+        ).decode('utf-8')[1:].replace('-', '.', 1).strip()
+    except Exception:
+        VERSION = 'dev'
 
 
 setup(
